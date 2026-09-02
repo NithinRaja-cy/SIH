@@ -1,3 +1,5 @@
+import numpy as np
+from app.audio_processing.feature_extraction import sanitize_float
 from app.models.schemas import (
     SpectralResult, 
     ProsodicResult, 
@@ -16,26 +18,22 @@ def evaluate_fusion_risk(
     Feature & Evidence Fusion Engine.
     Combines evidence from the 4 parallel modules and computes Contextual Clone Risk & Dynamic Risk Score.
     """
-    speaker_sim = speaker.speaker_similarity
-    synth_prob = deepfake.synthetic_probability
-    spectral_score = spectral.spectral_score
-    prosody_score = prosodic.prosody_score
+    speaker_sim = sanitize_float(speaker.speaker_similarity, 75.0)
+    synth_prob = sanitize_float(deepfake.synthetic_probability, 10.0)
+    spectral_score = sanitize_float(spectral.spectral_score, 15.0)
+    prosody_score = sanitize_float(prosodic.prosody_score, 15.0)
     
     # 1. Calculate Contextual Speaker / Clone Risk
     if speaker_sim >= 75.0 and synth_prob >= 70.0:
-        # Case 1: High speaker match + High deepfake prob = VOICE CLONING ATTACK!
         clone_risk = 92.0
     elif speaker_sim <= 40.0 and synth_prob >= 70.0:
-        # Case 2: Low speaker match + High deepfake prob = Impersonation
         clone_risk = 85.0
     elif speaker_sim >= 75.0 and synth_prob <= 30.0:
-        # Case 3: High speaker match + Low deepfake prob = Authentic speaker
         clone_risk = 12.0
     else:
-        # Case 4: Moderate or ambiguous risk
         clone_risk = 50.0
 
-    # 2. Updated Dynamic Risk Formula (40% Deepfake + 25% Spectral + 15% Prosodic + 20% Clone Risk)
+    # 2. Updated Dynamic Risk Formula
     raw_risk_score = (
         (synth_prob * 0.40) +
         (spectral_score * 0.25) +
@@ -43,6 +41,7 @@ def evaluate_fusion_risk(
         (clone_risk * 0.20)
     )
     
+    raw_risk_score = sanitize_float(raw_risk_score, 15.0)
     final_risk_score = float(round(min(100.0, max(0.0, raw_risk_score)), 1))
 
     # 3. Determine Risk Tier & Decision
@@ -59,7 +58,7 @@ def evaluate_fusion_risk(
         risk_level = "LOW"
         final_decision = "AUTHENTIC SPEECH VERIFIED (LOW RISK)"
 
-    # 4. Generate Itemized Evidence Points ("Why Was This Flagged?")
+    # 4. Generate Itemized Evidence Points
     why_flagged = []
     if synth_prob >= 50.0:
         why_flagged.append(f"High synthetic speech probability detected ({synth_prob}%).")
@@ -114,7 +113,7 @@ def evaluate_fusion_risk(
         ]
 
     return RiskAssessment(
-        clone_risk_score=round(clone_risk, 1),
+        clone_risk_score=round(sanitize_float(clone_risk, 50.0), 1),
         risk_score=final_risk_score,
         risk_level=risk_level,
         final_decision=final_decision,
