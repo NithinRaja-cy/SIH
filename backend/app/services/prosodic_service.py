@@ -1,27 +1,30 @@
 import asyncio
 import numpy as np
-from app.audio_processing.feature_extraction import extract_pitch_f0
+from app.audio_processing.feature_extraction import extract_pitch_f0, sanitize_float
 from app.models.schemas import ProsodicResult
 
 async def prosodic_analysis(audio_chunk: np.ndarray, sr: int = 16000) -> ProsodicResult:
-    """Independent Parallel Analysis Module 2: Real Prosodic Analysis"""
+    """Independent Parallel Analysis Module 2: Calibrated Prosodic Analysis"""
     await asyncio.sleep(0.02)
     
     features = extract_pitch_f0(audio_chunk, sr=sr)
     
-    jitter = features["jitter"]
-    shimmer = features["shimmer"]
-    pause_ratio = features["pause_ratio"]
-    avg_f0 = features["avg_f0_hz"]
+    jitter = sanitize_float(features["jitter"], 0.01)
+    shimmer = sanitize_float(features["shimmer"], 0.02)
+    avg_f0 = sanitize_float(features["avg_f0_hz"], 160.0)
     
-    # Real Prosodic Anomaly Score:
-    if jitter < 0.003:
-        jitter_penalty = 40.0
-    else:
-        jitter_penalty = jitter * 1800.0
+    # Real Acoustic Science Calibration:
+    # Natural human speech has pitch micro-perturbation (jitter between 0.005 and 0.025, shimmer between 0.015 and 0.045).
+    # Synthetic speech exhibits:
+    # 1. Robotic Pitch Lock: jitter < 0.002 (unnaturally flat pitch synthesis).
+    # 2. Concatenation Glitches: jitter > 0.035 or shimmer > 0.065.
+    
+    pitch_lock_contrib = 50.0 if (0.0 < jitter < 0.002) else 0.0
+    jitter_contrib = max(0.0, (jitter - 0.035) * 800.0)
+    shimmer_contrib = max(0.0, (shimmer - 0.05) * 300.0)
         
-    raw_score = jitter_penalty + (shimmer * 900.0) + (pause_ratio * 30.0)
-    score = float(np.clip(raw_score, 10.0, 95.0))
+    raw_score = 10.0 + pitch_lock_contrib + jitter_contrib + shimmer_contrib
+    score = float(np.clip(raw_score, 8.0, 95.0))
     
     if score >= 60.0:
         pitch_consistency = "robotic / unnatural"

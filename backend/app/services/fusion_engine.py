@@ -24,16 +24,16 @@ def evaluate_fusion_risk(
     prosody_score = sanitize_float(prosodic.prosody_score, 15.0)
     
     # 1. Calculate Contextual Speaker / Clone Risk
-    if speaker_sim >= 75.0 and synth_prob >= 70.0:
-        clone_risk = 92.0
-    elif speaker_sim <= 40.0 and synth_prob >= 70.0:
-        clone_risk = 85.0
-    elif speaker_sim >= 75.0 and synth_prob <= 30.0:
-        clone_risk = 12.0
+    if synth_prob >= 60.0 and speaker_sim >= 70.0:
+        clone_risk = 90.0
+    elif synth_prob >= 60.0 and speaker_sim < 40.0:
+        clone_risk = 80.0
+    elif synth_prob < 35.0:
+        clone_risk = 10.0
     else:
-        clone_risk = 50.0
+        clone_risk = 35.0
 
-    # 2. Updated Dynamic Risk Formula
+    # 2. Dynamic Risk Formula (40% Deepfake + 25% Spectral + 15% Prosodic + 20% Clone Risk)
     raw_risk_score = (
         (synth_prob * 0.40) +
         (spectral_score * 0.25) +
@@ -41,13 +41,13 @@ def evaluate_fusion_risk(
         (clone_risk * 0.20)
     )
     
-    raw_risk_score = sanitize_float(raw_risk_score, 15.0)
+    raw_risk_score = sanitize_float(raw_risk_score, 12.0)
     final_risk_score = float(round(min(100.0, max(0.0, raw_risk_score)), 1))
 
     # 3. Determine Risk Tier & Decision
     if final_risk_score >= 61.0:
         risk_level = "HIGH"
-        if speaker_sim >= 75.0 and synth_prob >= 70.0:
+        if speaker_sim >= 70.0 and synth_prob >= 60.0:
             final_decision = "POSSIBLE AI VOICE CLONING IMPERSONATION ATTACK"
         else:
             final_decision = "HIGH RISK SYNTHETIC AUDIO DETECTED"
@@ -66,7 +66,7 @@ def evaluate_fusion_risk(
         why_flagged.append("Spectral analysis identified abnormal acoustic/vocoder frequency artifacts.")
     if prosody_score >= 50.0:
         why_flagged.append("Prosodic analysis detected irregular pitch rhythm and unnatural speech behavior.")
-    if speaker_sim >= 75.0:
+    if speaker_sim >= 70.0 and synth_prob >= 50.0:
         why_flagged.append(f"Speaker similarity is high ({speaker_sim}%), suggesting target identity voice cloning.")
     elif speaker_sim <= 40.0 and speaker.reference_available:
         why_flagged.append(f"Speaker similarity is low ({speaker_sim}%), indicating identity mismatch.")
@@ -113,7 +113,7 @@ def evaluate_fusion_risk(
         ]
 
     return RiskAssessment(
-        clone_risk_score=round(sanitize_float(clone_risk, 50.0), 1),
+        clone_risk_score=round(sanitize_float(clone_risk, 10.0), 1),
         risk_score=final_risk_score,
         risk_level=risk_level,
         final_decision=final_decision,

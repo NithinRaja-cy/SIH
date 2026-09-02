@@ -69,11 +69,13 @@ def generate_pdf_report(data: AudioAnalysisResponse) -> bytes:
     story.append(Spacer(1, 10))
     story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY_BLUE, spaceBefore=0, spaceAfter=10))
 
+    risk_hex = "#DC2626" if data.risk.risk_level == "HIGH" else ("#F59E0B" if data.risk.risk_level == "MEDIUM" else "#16A34A")
+
     # Session metadata table
     session_info = [
         [Paragraph("<b>Session ID:</b>", body_style), Paragraph(data.session_id, body_style), Paragraph("<b>Date/Time:</b>", body_style), Paragraph(data.timestamp, body_style)],
         [Paragraph("<b>Audio Duration:</b>", body_style), Paragraph(f"{data.duration_seconds} sec", body_style), Paragraph("<b>Sample Rate:</b>", body_style), Paragraph(f"{data.preprocessing.sample_rate_hz} Hz", body_style)],
-        [Paragraph("<b>Risk Status:</b>", body_style), Paragraph(f"<font color='{data.risk.risk_level}'><b>{data.risk.risk_level} RISK</b></font>", body_style), Paragraph("<b>Final Risk Score:</b>", body_style), Paragraph(f"<b>{data.risk.risk_score} / 100</b>", body_style)]
+        [Paragraph("<b>Risk Status:</b>", body_style), Paragraph(f"<font color='{risk_hex}'><b>{data.risk.risk_level} RISK</b></font>", body_style), Paragraph("<b>Final Risk Score:</b>", body_style), Paragraph(f"<b>{data.risk.risk_score} / 100</b>", body_style)]
     ]
     t_session = Table(session_info, colWidths=[100, 160, 100, 180])
     t_session.setStyle(TableStyle([
