@@ -1,17 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, CheckCircle, AlertCircle, FileCheck, RefreshCw, Music, HardDrive, Clock, Sliders } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, CheckCircle, AlertCircle, FileCheck, Music, HardDrive, Clock, Sliders } from 'lucide-react';
 
-export default function AudioVerificationShowcase({ file, audioUrl, onConfirmAnalysis, isVerified, setIsVerified }) {
+export default function AudioVerificationShowcase({ file, onConfirmAnalysis, isVerified, setIsVerified }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [audioSrc, setAudioSrc] = useState('');
   const audioRef = useRef(null);
 
+  // Generate stable Blob Object URL on file change
   useEffect(() => {
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+    setAudioSrc(url);
     setIsPlaying(false);
     setCurrentTime(0);
-  }, [file, audioUrl]);
+    setDuration(0);
+
+    if (audioRef.current) {
+      audioRef.current.load();
+    }
+
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [file]);
 
   const togglePlay = () => {
     if (!audioRef.current) return;
@@ -19,8 +34,11 @@ export default function AudioVerificationShowcase({ file, audioUrl, onConfirmAna
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play();
-      setIsPlaying(true);
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(err => {
+        console.error("Audio playback error:", err);
+      });
     }
   };
 
@@ -32,8 +50,10 @@ export default function AudioVerificationShowcase({ file, audioUrl, onConfirmAna
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-      setDuration(audioRef.current.duration || 0);
+      setCurrentTime(audioRef.current.currentTime || 0);
+      if (audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+        setDuration(audioRef.current.duration);
+      }
     }
   };
 
@@ -46,13 +66,13 @@ export default function AudioVerificationShowcase({ file, audioUrl, onConfirmAna
   };
 
   const formatTime = (secs) => {
-    if (isNaN(secs)) return '0:00';
+    if (isNaN(secs) || secs < 0) return '0:00';
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) : '0.45';
+  const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) : '0.00';
 
   return (
     <div className="light-card p-6 mb-6 bg-gradient-to-r from-blue-50/60 via-indigo-50/40 to-white border-2 border-blue-200 rounded-2xl shadow-md">
@@ -97,7 +117,7 @@ export default function AudioVerificationShowcase({ file, audioUrl, onConfirmAna
           <Music className="w-5 h-5 text-blue-600 shrink-0" />
           <div className="truncate">
             <span className="text-[10px] font-bold text-slate-400 uppercase block">FILE NAME</span>
-            <span className="text-xs font-extrabold text-slate-800 truncate block">{file ? file.name : 'recorded_sample.wav'}</span>
+            <span className="text-xs font-extrabold text-slate-800 truncate block">{file ? file.name : 'audio_sample.wav'}</span>
           </div>
         </div>
 
@@ -113,7 +133,7 @@ export default function AudioVerificationShowcase({ file, audioUrl, onConfirmAna
           <Clock className="w-5 h-5 text-purple-600 shrink-0" />
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase block">DURATION</span>
-            <span className="text-xs font-extrabold text-slate-800">{formatTime(duration || 2.15)}</span>
+            <span className="text-xs font-extrabold text-slate-800">{formatTime(duration)}</span>
           </div>
         </div>
 
@@ -127,14 +147,15 @@ export default function AudioVerificationShowcase({ file, audioUrl, onConfirmAna
 
       </div>
 
-      {/* HTML5 Audio Player & Visualizer */}
+      {/* Audio Player Controls */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 mb-5">
         <audio
           ref={audioRef}
-          src={audioUrl || (file ? URL.createObjectURL(file) : '')}
+          src={audioSrc}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleTimeUpdate}
           onEnded={() => setIsPlaying(false)}
+          preload="metadata"
         />
 
         <div className="flex items-center space-x-4">
@@ -166,6 +187,11 @@ export default function AudioVerificationShowcase({ file, audioUrl, onConfirmAna
           <button onClick={toggleMute} className="p-2 text-slate-500 hover:text-slate-800">
             {isMuted ? <VolumeX className="w-5 h-5 text-rose-500" /> : <Volume2 className="w-5 h-5" />}
           </button>
+        </div>
+
+        {/* Standard Audio Controls Fallback */}
+        <div className="pt-2 border-t border-slate-100">
+          <audio controls src={audioSrc} className="w-full h-8 rounded" />
         </div>
       </div>
 

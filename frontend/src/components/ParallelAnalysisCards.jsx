@@ -1,11 +1,13 @@
 import React from 'react';
-import { Music, MessageSquare, Bot, UserCheck, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { Music, MessageSquare, Bot, UserCheck, CheckCircle2, Loader2, AlertCircle, Clock } from 'lucide-react';
 
 export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, speaker, isProcessing }) {
   
+  const hasResult = (moduleObj) => moduleObj && moduleObj.status === 'COMPLETE';
+
   // Status indicator builder
   const renderStatus = (isComp) => {
-    if (isProcessing && !isComp) {
+    if (isProcessing) {
       return (
         <span className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
           <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
@@ -13,10 +15,18 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
         </span>
       );
     }
+    if (isComp) {
+      return (
+        <span className="flex items-center space-x-1 py-1 px-2.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          <span>✓ COMPLETE</span>
+        </span>
+      );
+    }
     return (
-      <span className="flex items-center space-x-1 py-1 px-2.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-        <span>✓ COMPLETE</span>
+      <span className="flex items-center space-x-1 py-1 px-2 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+        <Clock className="w-3 h-3 text-slate-400" />
+        <span>STANDBY</span>
       </span>
     );
   };
@@ -52,20 +62,22 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
                   <p className="text-[10px] text-slate-400 font-semibold">ACOUSTIC & MEL SPECTRUM</p>
                 </div>
               </div>
-              {renderStatus(spectral?.status === 'COMPLETE')}
+              {renderStatus(hasResult(spectral))}
             </div>
 
             <div className="my-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
               <div className="flex items-baseline justify-between mb-1">
                 <span className="text-xs text-slate-500 font-medium">Spectral Anomaly Score</span>
-                <span className="text-xl font-black text-slate-900">{spectral?.spectral_score ?? 82} <span className="text-xs font-semibold text-slate-400">/ 100</span></span>
+                <span className="text-xl font-black text-slate-900">
+                  {hasResult(spectral) ? spectral.spectral_score : '0'} <span className="text-xs font-semibold text-slate-400">/ 100</span>
+                </span>
               </div>
               <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                 <div 
                   className={`h-full transition-all duration-500 ${
-                    (spectral?.spectral_score ?? 82) >= 60 ? 'bg-rose-500' : (spectral?.spectral_score ?? 82) >= 30 ? 'bg-amber-500' : 'bg-emerald-500'
+                    hasResult(spectral) && spectral.spectral_score >= 60 ? 'bg-rose-500' : 'bg-emerald-500'
                   }`}
-                  style={{ width: `${spectral?.spectral_score ?? 82}%` }}
+                  style={{ width: `${hasResult(spectral) ? spectral.spectral_score : 0}%` }}
                 ></div>
               </div>
             </div>
@@ -73,17 +85,17 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">MFCC Pattern:</span>
-                <span className="font-semibold capitalize text-slate-800">{spectral?.mfcc_status ?? 'suspicious'}</span>
+                <span className="font-semibold capitalize text-slate-800">{hasResult(spectral) ? spectral.mfcc_status : 'Awaiting Input'}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">Spectral Artifacts:</span>
-                <span className={`font-semibold ${spectral?.spectral_artifacts ? 'text-rose-600' : 'text-emerald-600'}`}>
-                  {spectral?.spectral_artifacts ? 'DETECTED' : 'CLEAN'}
+                <span className={`font-semibold ${hasResult(spectral) && spectral.spectral_artifacts ? 'text-rose-600' : 'text-slate-600'}`}>
+                  {hasResult(spectral) ? (spectral.spectral_artifacts ? 'DETECTED' : 'CLEAN') : 'Standby'}
                 </span>
               </div>
               <div className="flex justify-between py-1">
                 <span className="text-slate-500">Mel Pattern:</span>
-                <span className="font-semibold capitalize text-slate-800">{spectral?.mel_pattern ?? 'abnormal'}</span>
+                <span className="font-semibold capitalize text-slate-800">{hasResult(spectral) ? spectral.mel_pattern : 'Awaiting Input'}</span>
               </div>
             </div>
           </div>
@@ -91,9 +103,11 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-400">RESULT:</span>
             <span className={`px-2.5 py-0.5 rounded text-xs font-extrabold ${
-              spectral?.risk_level === 'HIGH' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
+              hasResult(spectral) 
+                ? (spectral.risk_level === 'HIGH' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700')
+                : 'bg-slate-100 text-slate-500'
             }`}>
-              {spectral?.risk_level === 'HIGH' ? 'HIGH ANOMALY' : 'NORMAL HARMONICS'}
+              {hasResult(spectral) ? (spectral.risk_level === 'HIGH' ? 'HIGH ANOMALY' : 'NORMAL HARMONICS') : 'STANDBY'}
             </span>
           </div>
         </div>
@@ -111,20 +125,22 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
                   <p className="text-[10px] text-slate-400 font-semibold">PITCH & CADENCE</p>
                 </div>
               </div>
-              {renderStatus(prosodic?.status === 'COMPLETE')}
+              {renderStatus(hasResult(prosodic))}
             </div>
 
             <div className="my-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
               <div className="flex items-baseline justify-between mb-1">
                 <span className="text-xs text-slate-500 font-medium">Prosody Anomaly Score</span>
-                <span className="text-xl font-black text-slate-900">{prosodic?.prosody_score ?? 68} <span className="text-xs font-semibold text-slate-400">/ 100</span></span>
+                <span className="text-xl font-black text-slate-900">
+                  {hasResult(prosodic) ? prosodic.prosody_score : '0'} <span className="text-xs font-semibold text-slate-400">/ 100</span>
+                </span>
               </div>
               <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                 <div 
                   className={`h-full transition-all duration-500 ${
-                    (prosodic?.prosody_score ?? 68) >= 60 ? 'bg-amber-500' : 'bg-emerald-500'
+                    hasResult(prosodic) && prosodic.prosody_score >= 60 ? 'bg-amber-500' : 'bg-emerald-500'
                   }`}
-                  style={{ width: `${prosodic?.prosody_score ?? 68}%` }}
+                  style={{ width: `${hasResult(prosodic) ? prosodic.prosody_score : 0}%` }}
                 ></div>
               </div>
             </div>
@@ -132,15 +148,15 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">Pitch Consistency:</span>
-                <span className="font-semibold capitalize text-slate-800">{prosodic?.pitch_consistency ?? 'moderate'}</span>
+                <span className="font-semibold capitalize text-slate-800">{hasResult(prosodic) ? prosodic.pitch_consistency : 'Awaiting Input'}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">Speech Rhythm:</span>
-                <span className="font-semibold capitalize text-slate-800">{prosodic?.rhythm_status ?? 'suspicious'}</span>
+                <span className="font-semibold capitalize text-slate-800">{hasResult(prosodic) ? prosodic.rhythm_status : 'Awaiting Input'}</span>
               </div>
               <div className="flex justify-between py-1">
                 <span className="text-slate-500">Jitter / Perturbation:</span>
-                <span className="font-semibold capitalize text-slate-800">{prosodic?.jitter_status ?? 'high'}</span>
+                <span className="font-semibold capitalize text-slate-800">{hasResult(prosodic) ? prosodic.jitter_status : 'Awaiting Input'}</span>
               </div>
             </div>
           </div>
@@ -148,9 +164,11 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-400">RESULT:</span>
             <span className={`px-2.5 py-0.5 rounded text-xs font-extrabold ${
-              (prosodic?.prosody_score ?? 68) >= 50 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'
+              hasResult(prosodic)
+                ? (prosodic.prosody_score >= 50 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700')
+                : 'bg-slate-100 text-slate-500'
             }`}>
-              {(prosodic?.prosody_score ?? 68) >= 50 ? 'SUSPICIOUS CADENCE' : 'NATURAL CADENCE'}
+              {hasResult(prosodic) ? (prosodic.prosody_score >= 50 ? 'SUSPICIOUS CADENCE' : 'NATURAL CADENCE') : 'STANDBY'}
             </span>
           </div>
         </div>
@@ -168,18 +186,18 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
                   <p className="text-[10px] text-slate-400 font-semibold">NEURAL ANTI-SPOOFING</p>
                 </div>
               </div>
-              {renderStatus(deepfake?.status === 'COMPLETE')}
+              {renderStatus(hasResult(deepfake))}
             </div>
 
             <div className="my-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
               <div className="flex items-baseline justify-between mb-1">
                 <span className="text-xs text-slate-500 font-medium">Synthetic Probability</span>
-                <span className="text-xl font-black text-purple-700">{deepfake?.synthetic_probability ?? 88}%</span>
+                <span className="text-xl font-black text-purple-700">{hasResult(deepfake) ? deepfake.synthetic_probability : '0'}%</span>
               </div>
               <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-purple-600 transition-all duration-500"
-                  style={{ width: `${deepfake?.synthetic_probability ?? 88}%` }}
+                  style={{ width: `${hasResult(deepfake) ? deepfake.synthetic_probability : 0}%` }}
                 ></div>
               </div>
             </div>
@@ -187,15 +205,15 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">Genuine Voice Prob:</span>
-                <span className="font-semibold text-slate-800">{deepfake?.genuine_probability ?? 12}%</span>
+                <span className="font-semibold text-slate-800">{hasResult(deepfake) ? `${deepfake.genuine_probability}%` : 'Awaiting Input'}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">Model Classification:</span>
-                <span className="font-extrabold text-purple-700">{deepfake?.classification ?? 'LIKELY AI-GENERATED'}</span>
+                <span className="font-extrabold text-purple-700">{hasResult(deepfake) ? deepfake.classification : 'Standby'}</span>
               </div>
               <div className="flex justify-between py-1">
                 <span className="text-slate-500">Confidence Score:</span>
-                <span className="font-semibold text-slate-800">{deepfake?.confidence ?? 88}%</span>
+                <span className="font-semibold text-slate-800">{hasResult(deepfake) ? `${deepfake.confidence}%` : 'Awaiting Input'}</span>
               </div>
             </div>
           </div>
@@ -203,9 +221,11 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-400">VERDICT:</span>
             <span className={`px-2.5 py-0.5 rounded text-xs font-extrabold ${
-              (deepfake?.synthetic_probability ?? 88) >= 50 ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-700'
+              hasResult(deepfake)
+                ? (deepfake.synthetic_probability >= 50 ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-700')
+                : 'bg-slate-100 text-slate-500'
             }`}>
-              {deepfake?.classification ?? 'LIKELY AI-GENERATED'}
+              {hasResult(deepfake) ? deepfake.classification : 'STANDBY'}
             </span>
           </div>
         </div>
@@ -223,18 +243,18 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
                   <p className="text-[10px] text-slate-400 font-semibold">COSINE SIMILARITY</p>
                 </div>
               </div>
-              {renderStatus(speaker?.status === 'COMPLETE')}
+              {renderStatus(hasResult(speaker))}
             </div>
 
             <div className="my-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
               <div className="flex items-baseline justify-between mb-1">
                 <span className="text-xs text-slate-500 font-medium">Speaker Similarity</span>
-                <span className="text-xl font-black text-emerald-700">{speaker?.speaker_similarity ?? 84}%</span>
+                <span className="text-xl font-black text-emerald-700">{hasResult(speaker) ? speaker.speaker_similarity : '0'}%</span>
               </div>
               <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-emerald-600 transition-all duration-500"
-                  style={{ width: `${speaker?.speaker_similarity ?? 84}%` }}
+                  style={{ width: `${hasResult(speaker) ? speaker.speaker_similarity : 0}%` }}
                 ></div>
               </div>
             </div>
@@ -242,23 +262,23 @@ export default function ParallelAnalysisCards({ spectral, prosodic, deepfake, sp
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">Identity Match Tier:</span>
-                <span className="font-bold text-emerald-700">{speaker?.identity_match ?? 'HIGH'}</span>
+                <span className="font-bold text-emerald-700">{hasResult(speaker) ? speaker.identity_match : 'Standby'}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">Voice Consistency:</span>
-                <span className="font-semibold text-slate-800">{speaker?.voice_consistency ?? 84}%</span>
+                <span className="font-semibold text-slate-800">{hasResult(speaker) ? `${speaker.voice_consistency}%` : 'Awaiting Input'}</span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-slate-500">Baseline Available:</span>
-                <span className="font-semibold text-slate-800">{speaker?.reference_available ? 'YES' : 'DEFAULT BASELINE'}</span>
+                <span className="text-slate-500">Target Profile:</span>
+                <span className="font-semibold text-slate-800">Inbuilt Baseline Active</span>
               </div>
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100">
-            <div className="bg-amber-50 p-2 rounded border border-amber-200 flex items-start space-x-1.5 text-[10px] text-amber-900 font-medium leading-tight">
-              <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-              <span>HIGH SPEAKER SIMILARITY DOES NOT EQUAL GENUINE VOICE!</span>
+            <div className="bg-indigo-50 p-2 rounded border border-indigo-200 flex items-start space-x-1.5 text-[10px] text-indigo-900 font-medium leading-tight">
+              <AlertCircle className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
+              <span>Inbuilt target speaker profile loaded for instant Cosine Similarity matching.</span>
             </div>
           </div>
         </div>

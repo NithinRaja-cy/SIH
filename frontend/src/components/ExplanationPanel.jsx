@@ -1,22 +1,19 @@
 import React from 'react';
-import { HelpCircle, CheckCircle2, AlertOctagon, BrainCircuit } from 'lucide-react';
+import { HelpCircle, AlertOctagon, BrainCircuit } from 'lucide-react';
 
 export default function ExplanationPanel({ whyFlagged = [], aiExplanation = '' }) {
+  const hasData = (whyFlagged && whyFlagged.length > 0) || aiExplanation;
+
   const defaultEvidence = [
-    "High synthetic speech probability detected (88%).",
-    "Spectral analysis identified abnormal acoustic & vocoder phase artifacts (>6.5 kHz).",
-    "Prosodic analysis detected irregular pitch rhythm and high jitter perturbation.",
-    "Speaker similarity is high (84%), indicating cloned identity impersonation.",
-    "Multiple independent analysis signals indicate high voice cloning threat."
+    "Upload an audio file or record live microphone audio.",
+    "Click 'VERIFY AUDIO & RUN PARALLEL ANALYSIS' in the showcase card.",
+    "The system will execute 4 parallel analysis modules and display itemized acoustic threat evidence."
   ];
 
-  const defaultNarrative = 
-    "The incoming voice strongly resembles the reference target speaker (84% similarity match). " +
-    "However, abnormal spectral phase artifacts and high synthetic speech probability (88%) " +
-    "confirm a sophisticated AI voice cloning impersonation attack.";
+  const defaultNarrative = "Awaiting audio verification and parallel execution. Select an audio file above to generate transparent AI forensic threat rationale.";
 
-  const points = whyFlagged.length > 0 ? whyFlagged : defaultEvidence;
-  const explanation = aiExplanation || defaultNarrative;
+  const points = hasData ? whyFlagged : defaultEvidence;
+  const explanation = hasData ? aiExplanation : defaultNarrative;
 
   return (
     <div className="light-card p-6 mb-8 border-l-4 border-l-purple-600">
